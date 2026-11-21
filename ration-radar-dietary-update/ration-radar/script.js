@@ -56,9 +56,23 @@ const cheapest=k=>Math.min(...PRICES[k][3]);
 const perServing=r=>Object.entries(r.ing).reduce((s,[k,f])=>s+f*cheapest(k),0);
 const S={step:0,budget:'',days:5,people:1,meals:3,diets:[],cuis:[],pool:{},shown:{},sel:new Set(),checked:new Set(),pick:{},open:new Set(),saved:readSavedRecipes()};
 const $=s=>document.querySelector(s),app=$('#app');
+const setWide=on=>app.classList.toggle('wide',on);
+const icons={
+  radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12 18.4 5.6"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
+  sunrise:'<path d="M12 3v7"/><path d="m5.6 10.4 1.4 1.4"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m17 11.8 1.4-1.4"/><path d="M22 22H2"/><path d="m8.5 6.5 3.5-3.5 3.5 3.5"/><path d="M16 18a4 4 0 0 0-8 0"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.3 17.7-1.4 1.4"/><path d="m19.1 4.9-1.4 1.4"/>',
+  moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  apple:'<path d="M12 20.9c1.5 0 2.8 1.1 4 1.1 3 0 6-8 6-12.2A4.9 4.9 0 0 0 17 5c-2.2 0-4 1.4-5 2-1-.6-2.8-2-5-2a4.9 4.9 0 0 0-5 4.8C2 14 5 22 8 22c1.2 0 2.5-1.1 4-1.1Z"/><path d="M10 2c1 .5 2 2 2 5"/>',
+  heart:'<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5C2 10.8 3.5 12.5 5 14l7 7Z"/>',
+  swap:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v5h-5"/>',
+  mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/><path d="M8 22h8"/>',
+  close:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'
+};
+const icon=(name,size=18,cls='')=>`<svg class="icon${cls?' '+cls:''}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
+const mealIcon=t=>({b:'sunrise',l:'sun',d:'moon',s:'apple'}[t]||'sun');
 const types=()=>[...(S.meals==1?['l']:S.meals==2?['l','d']:['b','l','d']),'s'];
 const bar=n=>`<div class="steps" aria-hidden="true">${[0,1,2,3].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</div>`;
-const head=n=>`<div class="brand">🥘 Ration Radar</div>${bar(n)}`;
+const head=n=>`<div class="brand">${icon('radar',20,'brand-mark')}Ration Radar</div>${bar(n)}`;
 
 function grocery(){
   const per={},A={};
@@ -70,18 +84,18 @@ function grocery(){
   return{lines,st,best:lines.reduce((s,l)=>s+l.price,0)};
 }
 
-function page1(){app.innerHTML=`${head(0)}<h1>Eat well on a student budget.</h1><p class="sub">Tell us what you can spend. We’ll plan the meals and check prices in Debrecen shops.</p>
+function page1(){setWide(false);app.innerHTML=`${head(0)}<h1>Eat well on a student budget.</h1><p class="sub">Tell us what you can spend. We’ll plan the meals and check prices in Debrecen shops.</p>
 <label for="bud">Budget (Ft)</label><input id="bud" type="number" inputmode="numeric" min="0" step="500" placeholder="e.g. 15000" value="${S.budget}">
 <label for="dn">How many days?</label><input id="dn" type="number" inputmode="numeric" min="1" max="30" placeholder="e.g. 5" value="${S.days}">
 <label for="pp">How many people?</label><input id="pp" type="number" inputmode="numeric" min="1" max="20" placeholder="e.g. 2" value="${S.people}">
 <label for="mp">Meals per day (1 to 3)</label><input id="mp" type="number" inputmode="numeric" min="1" max="3" placeholder="e.g. 3" value="${S.meals}">
-<button class="btn" id="go1" disabled>Next: dietary needs</button><button class="btn ghost" id="savedMenu">♡ Saved recipes (${S.saved.size})</button>`;
+<button class="btn" id="go1" disabled>Next: dietary needs</button><button class="btn ghost" id="savedMenu">${icon('heart')} Saved recipes <span class="count">${S.saved.size}</span></button>`;
   const ok=()=>{$('#go1').disabled=!(+$('#bud').value>0&&+$('#dn').value>0&&+$('#mp').value>=1&&+$('#pp').value>=1)};
   $('#bud').oninput=ok;$('#dn').oninput=ok;$('#mp').oninput=ok;$('#pp').oninput=ok;ok();
   $('#savedMenu').onclick=pageSaved;
   $('#go1').onclick=()=>{S.budget=+$('#bud').value;S.days=Math.min(30,+$('#dn').value);S.people=Math.min(20,Math.max(1,Math.round(+$('#pp').value)));S.meals=Math.min(3,Math.max(1,Math.round(+$('#mp').value)));page2()};
 }
-function page2(){app.innerHTML=`${head(1)}<h1>Diet, culture & cuisine</h1><p class="sub">Choose any preferences that apply. You can combine them; recipes must meet every selected filter.</p>
+function page2(){setWide(false);app.innerHTML=`${head(1)}<h1>Diet, culture & cuisine</h1><p class="sub">Choose any preferences that apply. You can combine them; recipes must meet every selected filter.</p>
 ${Object.entries(DIET_GROUPS).map(([group,items])=>`<h2>${group}</h2><div class="chips">${items.map(d=>`<button class="chip" aria-pressed="${S.diets.includes(d)}" data-d="${d}">${d}</button>`).join('')}</div>`).join('')}
 <h2>Cuisines</h2><div class="chips cuisine-chips"><button class="chip" aria-pressed="${S.cuis.length===0}" data-c-all="true">All</button>${CUIS.map(c=>`<button class="chip" aria-pressed="${S.cuis.includes(c)}" data-c="${c}">${c}</button>`).join('')}</div>
 <p class="note diet-warning" style="margin-top:16px">${dietNote} Kidney disease/CKD, potassium or phosphorus limits, heart failure and other complex medical diets are not auto-filtered because the database has no verified nutrient values for these needs. “Halal” and “Kosher” filters only screen listed ingredients; they cannot verify certification, slaughter, utensils or kitchen separation. Hindu, Jain, Sikh and Buddhist practices vary between individuals and traditions.</p>
@@ -92,25 +106,31 @@ ${Object.entries(DIET_GROUPS).map(([group,items])=>`<h2>${group}</h2><div class=
   $('#bk').onclick=page1;$('#go2').onclick=loading;
 }
 async function loading(){
-  app.innerHTML=`<div class="load" role="status"><div class="pot"><span>🥕</span><span>🍅</span><span>🧅</span><div class="lid"></div><div class="body"></div></div>
-  <b id="lt">Finding recipes that fit…</b><div class="bar"><b></b></div><small class="note">Checking Tesco, Spar and Aldi prices</small></div>`;
+  setWide(false);
+  app.innerHTML=`<div class="load" role="status"><span class="load-mark">${icon('radar',30)}</span>
+  <b id="lt">Finding recipes that fit…</b><div class="load-bar" aria-hidden="true"><b></b></div><small class="note">Checking Tesco, Spar and Aldi prices</small></div>`;
   const msgs=['Finding recipes that fit…','Checking Tesco prices…','Checking Spar prices…','Checking Aldi prices…'];let i=0;
-  const iv=setInterval(()=>{const e=$('#lt');if(e)e.textContent=msgs[++i%msgs.length]},650);
-  await new Promise(r=>setTimeout(r,2700));clearInterval(iv);
+  const iv=setInterval(()=>{const e=$('#lt');if(e)e.textContent=msgs[++i%msgs.length]},300);
+  await new Promise(r=>setTimeout(r,900));clearInterval(iv);
   S.sel=new Set();S.checked=new Set();S.pick={};S.open=new Set();
   types().forEach(t=>{S.pool[t]=R.filter(r=>r.meal===t&&S.diets.every(d=>DIETS[d](r))&&(S.cuis.length===0||S.cuis.includes(r.cu))).sort(()=>Math.random()-.5).sort((a,b)=>pref(b)-pref(a));S.shown[t]=S.pool[t].slice(0,3).map(r=>r.id)});
   page3();
 }
 function page3(){
+  setWide(true);
   const g=grocery(),over=g.best>S.budget&&S.sel.size>0;
-  app.innerHTML=`${head(2)}<h1>Pick your meals</h1><p class="sub">Tick the ones you like, snacks included. Tap ↻ to swap a recipe. Your budget is about ${fmt(S.budget/S.days/S.people)} per person per day.</p>
-  ${types().map(t=>`<h2>${MEALS[t]}</h2>${S.cuis.length&&S.shown[t].some(id=>!S.cuis.includes(R[id].cu))?'<p class="note" style="margin:-6px 0 8px">Few matches in your cuisines, so we added other dishes.</p>':''}${S.shown[t].length?S.shown[t].map(id=>{const r=R[id];return`<div class="meal ${S.sel.has(id)?'sel':''}"><span class="em">${r.img?`<img class="th" src="${r.img}" alt="" loading="lazy" onerror="this.replaceWith('🍽️')">`:r.em}</span>
-  <div class="t"><b>${r.name}</b><small>${r.cu} · about ${fmt(perServing(r))} per serving</small><span class="recipe-tags">${recipeTags(r).slice(0,3).map(tag=>`<i>${tag}</i>`).join('')}</span></div>
-  <button class="save-recipe ${S.saved.has(id)?'saved':''}" data-save="${id}" type="button" aria-label="${S.saved.has(id)?'Remove from':'Save to'} saved recipes">${S.saved.has(id)?'♥':'♡'}</button><button class="rf" data-t="${t}" data-id="${id}" aria-label="Show another ${MEALS[t].toLowerCase()} recipe"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+  app.innerHTML=`${head(2)}<div class="meal-layout"><div class="meal-main">
+  <h1>Pick your meals</h1><p class="sub">Tick the dishes you want, snacks included. Swap any recipe for another. Your budget is about ${fmt(S.budget/S.days/S.people)} per person per day.</p>
+  ${types().map(t=>`<h2 class="section-title">${icon(mealIcon(t))}${MEALS[t]}</h2>${S.cuis.length&&S.shown[t].some(id=>!S.cuis.includes(R[id].cu))?'<p class="note" style="margin:-4px 0 8px">Few matches in your cuisines, so we added other dishes.</p>':''}${S.shown[t].length?S.shown[t].map(id=>{const r=R[id];return`<div class="meal ${S.sel.has(id)?'sel':''}">
+  <div class="t"><b>${r.name}</b><small>${r.cu} · ${fmt(perServing(r))} per serving</small><span class="recipe-tags">${recipeTags(r).slice(0,3).map(tag=>`<i>${tag}</i>`).join('')}</span></div>
+  <button class="icon-btn save-recipe ${S.saved.has(id)?'saved':''}" data-save="${id}" type="button" aria-label="${S.saved.has(id)?'Remove from':'Save to'} saved recipes">${icon('heart')}</button><button class="icon-btn rf" data-t="${t}" data-id="${id}" aria-label="Show another ${MEALS[t].toLowerCase()} recipe">${icon('swap')}</button>
   <input type="checkbox" data-id="${id}" ${S.sel.has(id)?'checked':''} aria-label="Select ${r.name}"></div>`}).join(''):'<p class="note">No recipes match your dietary choices for this meal.</p>'}`).join('')}
-  <div class="bottom"><div style="display:flex;justify-content:space-between"><span>${S.api?'Budget':'Estimated groceries'}</span><b>${S.api?fmt(S.budget):fmt(g.best)+' / '+fmt(S.budget)}</b></div>
-  <div class="warn">${over?'Budget might not be enough':''}</div>
-  <button class="btn" id="go3" ${S.sel.size?'':'disabled'}>Make my grocery list</button><button class="btn ghost" id="bk">Back</button></div>`;
+  <button class="btn ghost back-btn" id="bk">Back to diet and cuisine</button>
+  </div><aside class="plan" aria-label="Plan summary">
+  <div class="plan-row"><span>Estimated groceries</span><b>${fmt(g.best)}<small> of ${fmt(S.budget)}</small></b></div>
+  ${over?`<p class="warn">Over budget by ${fmt(g.best-S.budget)}</p>`:''}
+  <button class="btn" id="go3" ${S.sel.size?'':'disabled'}>Make my grocery list</button>
+  </aside></div>`;
   document.querySelectorAll('.meal input').forEach(c=>c.onchange=()=>{const id=+c.dataset.id;c.checked?S.sel.add(id):S.sel.delete(id);page3()});
   document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>{toggleSavedRecipe(+b.dataset.save);page3()});
   document.querySelectorAll('.rf').forEach(b=>b.onclick=()=>{const t=b.dataset.t,id=+b.dataset.id,next=S.pool[t].find(r=>!S.shown[t].includes(r.id));
@@ -153,8 +173,8 @@ function showRecipeDex(id) {
   const overlay = document.createElement('div');
   overlay.className = 'dex-overlay';
   overlay.innerHTML = `<section class="dex-panel" role="dialog" aria-modal="true" aria-labelledby="dex-title">
-    <div class="dex-top"><span class="note">RATION RADAR · RECIPE FILE #${String(id+1).padStart(3,'0')}</span><div class="dex-actions"><button class="dex-save" type="button">${S.saved.has(id)?'♥ Saved':'♡ Save recipe'}</button><button class="dex-close" type="button" aria-label="Close recipe">×</button></div></div>
-    <div class="dex-hero"><div class="dex-big">${recipe.em || '🍽️'}</div><div><h2 id="dex-title">${recipe.name}</h2><div class="dex-meta">${recipe.cu || 'Everyday'} · ${recipe.detail.time} · ${servings} servings</div><div class="recipe-tags">${recipeTags(recipe).map(tag=>`<i>${tag}</i>`).join('')}</div></div></div>
+    <div class="dex-top"><span class="note">Recipe file ${String(id+1).padStart(3,'0')}</span><div class="dex-actions"><button class="dex-save" type="button">${S.saved.has(id)?'Saved':'Save recipe'}</button><button class="dex-close" type="button" aria-label="Close recipe">${icon('close')}</button></div></div>
+    <div class="dex-hero"><div class="dex-big">${icon(mealIcon(recipe.meal),24)}</div><div><h2 id="dex-title">${recipe.name}</h2><div class="dex-meta">${recipe.cu || 'Everyday'} · ${recipe.detail.time} · ${servings} servings</div><div class="recipe-tags">${recipeTags(recipe).map(tag=>`<i>${tag}</i>`).join('')}</div></div></div>
     <div class="dex-unit-row"><label for="dex-units">Measurement system</label><select id="dex-units"><option value="metric" ${unit==='metric'?'selected':''}>Metric (g, ml, °C)</option><option value="imperial" ${unit==='imperial'?'selected':''}>Imperial (oz, fl oz, °F)</option></select></div>
     <h3>Ingredients</h3><ul class="dex-ingredients">${ingredients}</ul>
     <h3>Necessary tools</h3><div class="dex-tools">${recipe.detail.tools.map(tool=>`<span class="dex-tool">${tool}</span>`).join('')}</div>
@@ -165,7 +185,7 @@ function showRecipeDex(id) {
   requestAnimationFrame(()=>overlay.classList.add('open'));
   const close=()=>{overlay.classList.remove('open');setTimeout(()=>overlay.remove(),240);};
   overlay.querySelector('.dex-close').onclick=close;
-  overlay.querySelector('.dex-save').onclick=()=>{toggleSavedRecipe(id);overlay.querySelector('.dex-save').textContent=S.saved.has(id)?'♥ Saved':'♡ Save recipe'};
+  overlay.querySelector('.dex-save').onclick=()=>{toggleSavedRecipe(id);overlay.querySelector('.dex-save').textContent=S.saved.has(id)?'Saved':'Save recipe'};
   overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
   overlay.querySelector('#dex-units').onchange=e=>{UNIT_SYSTEM=e.target.value;close();showRecipeDex(id);};
   const onKey=e=>{if(e.key==='Escape'){close();document.removeEventListener('keydown',onKey);}};
@@ -174,14 +194,14 @@ function showRecipeDex(id) {
 function renderRecipeDex() {
   const selected = [...S.sel].map(id=>R[id]).filter(Boolean);
   if (!selected.length) return '';
-  return `<section class="dex-section"><h2>Your recipe Pokédex</h2>
-    <p class="dex-intro">Your selected meals, collected in one place. Open a recipe or start a voice-guided cooking session.</p>
+  return `<section class="dex-section"><h2>In this plan</h2>
+    <p class="dex-intro">The meals in your plan. Open a recipe for amounts and steps, or start hands-free cooking.</p>
     <div class="dex-grid">${selected.map((recipe,index)=>`<article class="dex-card-wrap">
       <button class="dex-card" type="button" data-dex="${recipe.id}">
-        <span class="dex-number">#${String(index+1).padStart(3,'0')}</span><span class="dex-em">${recipe.em || '🍽️'}</span>
+        <span class="dex-number">${String(index+1).padStart(3,'0')}</span><span class="dex-em">${icon(mealIcon(recipe.meal),22)}</span>
         <strong>${recipe.name}</strong><small>${recipe.cu || 'Everyday'} · ${MEALS[recipe.meal]}</small>
       </button>
-      <button class="btn cook-mode-btn" type="button" data-cook="${recipe.id}">🎙️ Hands-Free Cook Mode</button>
+      <button class="btn cook-mode-btn" type="button" data-cook="${recipe.id}">${icon('mic',16)} Hands-free cook mode</button>
     </article>`).join('')}</div></section>`;
 }
 
@@ -246,11 +266,11 @@ async function startHandsFreeCook(id) {
   cookOverlay = document.createElement('div');
   cookOverlay.className = 'cook-overlay';
   cookOverlay.innerHTML = `<section class="cook-panel" role="dialog" aria-modal="true" aria-labelledby="cook-title">
-    <div class="cook-header"><div><span class="note">RATION RADAR · VOICE COOKING</span><h2 id="cook-title">${safeText(recipe.name)}</h2></div><button class="dex-close cook-close" type="button" aria-label="Close cooking mode">×</button></div>
+    <div class="cook-header"><div><span class="note">Voice cooking</span><h2 id="cook-title">${safeText(recipe.name)}</h2></div><button class="dex-close cook-close" type="button" aria-label="Close cooking mode">${icon('close')}</button></div>
     <p class="cook-intro">Your cooking companion is ready. Talk naturally—ask for the next step, repeat an instruction, or ask a question.</p>
     <div class="cook-status" data-state="idle" aria-live="polite">Ready to connect</div>
-    <div class="cook-transcript" aria-live="polite"><p class="cook-line agent-line"><strong>Ration Radar:</strong> Hi! I’ll guide you through ${safeText(recipe.name)}. Start the voice session when you're ready.</p></div>
-    <div class="cook-controls"><button class="btn" id="cook-start" type="button">🎙️ Start talking</button><button class="btn ghost" id="cook-stop" type="button" disabled>End session</button></div>
+    <div class="cook-transcript" aria-live="polite"><p class="cook-line agent-line"><strong>Ration Radar:</strong> Hello. I’ll guide you through ${safeText(recipe.name)}. Start the voice session when you're ready.</p></div>
+    <div class="cook-controls"><button class="btn" id="cook-start" type="button">${icon('mic')} Start talking</button><button class="btn ghost" id="cook-stop" type="button" disabled>End session</button></div>
     <p class="note cook-privacy">Your browser will ask for microphone permission. Use headphones if you want to reduce audio feedback.</p>
   </section>`;
   document.body.appendChild(cookOverlay);
@@ -301,9 +321,10 @@ async function startHandsFreeCook(id) {
 }
 
 function pageSaved(){
+  setWide(false);
   const recipes=[...S.saved].map(id=>R[id]).filter(Boolean);
   app.innerHTML=`${head(0)}<h1>Saved recipes</h1><p class="sub">Your personal recipe collection. Saved recipes stay here when you start a new meal plan.</p>
-    ${recipes.length?`<div class="dex-grid">${recipes.map(recipe=>`<article class="saved-card"><button class="dex-card" type="button" data-open-saved="${recipe.id}"><span class="dex-em">${recipe.em||'🍽️'}</span><strong>${recipe.name}</strong><small>${recipe.cu||'Everyday'} · ${MEALS[recipe.meal]}</small><span class="recipe-tags">${recipeTags(recipe).slice(0,3).map(tag=>`<i>${tag}</i>`).join('')}</span></button><button class="btn cook-mode-btn" type="button" data-saved-cook="${recipe.id}">🎙️ Hands-Free Cook Mode</button><button class="link saved-remove" type="button" data-remove-saved="${recipe.id}">Remove</button></article>`).join('')}</div>`:'<p class="note">You haven’t saved any recipes yet. Save recipes from the meal results or a recipe card.</p>'}
+    ${recipes.length?`<div class="dex-grid">${recipes.map(recipe=>`<article class="saved-card"><button class="dex-card" type="button" data-open-saved="${recipe.id}"><span class="dex-em">${icon(mealIcon(recipe.meal),22)}</span><strong>${recipe.name}</strong><small>${recipe.cu||'Everyday'} · ${MEALS[recipe.meal]}</small><span class="recipe-tags">${recipeTags(recipe).slice(0,3).map(tag=>`<i>${tag}</i>`).join('')}</span></button><button class="btn cook-mode-btn" type="button" data-saved-cook="${recipe.id}">${icon('mic',16)} Hands-free cook mode</button><button class="link saved-remove" type="button" data-remove-saved="${recipe.id}">Remove</button></article>`).join('')}</div>`:'<p class="note">You haven’t saved any recipes yet. Save recipes from the meal results or a recipe card.</p>'}
     <button class="btn ghost" id="savedBack">Back to start</button>`;
   document.querySelectorAll('[data-open-saved]').forEach(button=>button.onclick=()=>showRecipeDex(+button.dataset.openSaved));
   document.querySelectorAll('[data-remove-saved]').forEach(button=>button.onclick=()=>{toggleSavedRecipe(+button.dataset.removeSaved);pageSaved()});
@@ -312,22 +333,23 @@ function pageSaved(){
 }
 
 function page4(){
-  const g=grocery(),min=Math.min(...g.st);
+  setWide(false);
+  const g=grocery(),min=Math.min(...g.st),max=Math.max(...g.st);
   const sumChecked=()=>g.lines.filter(l=>S.checked.has(l.k)).reduce((s,l)=>s+l.price,0);
-  app.innerHTML=`${head(3)}<h1>Your grocery list</h1><p class="sub">${S.api?'Everything you need for the meals you picked.':'Cheapest shop picked for each item. Tap “Other shops” to compare or switch.'}</p>
-  <div class="stores">${STORES.map((s,i)=>`<div class="${g.st[i]==min?'best':''}"><span>${s}</span><b>${fmt(g.st[i])}</b></div>`).join('')}</div>
+  app.innerHTML=`${head(3)}<h1>Your grocery list</h1><p class="sub">${S.api?'Everything you need for the meals you picked.':'Cheapest shop picked for each item. Open “Other shops” to compare or switch.'}</p>
+  <div class="stores">${STORES.map((s,i)=>`<div class="${g.st[i]==min?'best':''}"><span>${s}</span><b>${fmt(g.st[i])}</b><span class="store-bar" aria-hidden="true"><i style="width:${Math.max(6,Math.round(g.st[i]/max*100))}%"></i></span></div>`).join('')}</div>
   <p class="note p0" style="margin:0">Full list at one shop. Your current picks cost ${fmt(g.best)}.</p>
-  <div class="rc"><h3>RATION RADAR</h3><div class="c">Debrecen · ${S.days} days · ${S.people} ${S.people==1?'person':'people'} · ${S.meals} meals/day</div><hr>
+  <div class="rc"><h3>Ration Radar</h3><div class="c">Debrecen · ${S.days} days · ${S.people} ${S.people==1?'person':'people'} · ${S.meals} meals/day</div><hr>
   <div id="items">${g.lines.map(l=>`<div class="itw"><label class="it off" data-k="${l.k}"><input type="checkbox" data-k="${l.k}" aria-label="${L(l).n}">
-  <span class="pic">${L(l).e}</span><span class="n"><b>${L(l).n}</b><small>${L(l).s}</small></span><span class="p">${L(l).p}</span></label><button class="link sm" data-o="${l.k}">${S.open.has(l.k)?'Hide shops':'Other shops'}</button>${S.open.has(l.k)?`<div class="opts">${STORES.map((s,i)=>`<label class="op"><input type="radio" name="r${l.k}" data-k="${l.k}" data-i="${i}" ${i==l.si?'checked':''}><span>${s}</span><span>${fmt(l.all[i])}${i==l.mi?' · cheapest':''}</span></label>`).join('')}</div>`:''}</div>`).join('')}</div><hr>
-  <div class="tot"><span>${S.api?'CHECKED OFF':'TOTAL'} (<span id="cnt">0</span> of ${g.lines.length} items)</span><span id="tt">0 Ft</span></div>
+  <span class="receipt-emoji">${L(l).e}</span><span class="n"><b>${L(l).n}</b><small>${L(l).s}</small></span><span class="p">${L(l).p}</span></label><button class="link sm" data-o="${l.k}">${S.open.has(l.k)?'Hide shops':'Other shops'}</button>${S.open.has(l.k)?`<div class="opts">${STORES.map((s,i)=>`<label class="op"><input type="radio" name="r${l.k}" data-k="${l.k}" data-i="${i}" ${i==l.si?'checked':''}><span>${s}</span><span>${fmt(l.all[i])}${i==l.mi?' · cheapest':''}</span></label>`).join('')}</div>`:''}</div>`).join('')}</div><hr>
+  <div class="tot"><span>${S.api?'Checked off':'Total'} (<span id="cnt">0</span> of ${g.lines.length} items)</span><span id="tt">0 Ft</span></div>
   <div class="c" style="margin:10px 0 0" id="bl"></div></div>
   <button class="link" id="all" style="margin-top:14px">Check all items</button>
-  <button class="btn ghost" id="bk">Back to meals</button><button class="btn ghost" id="again">Start over</button>
+  <div class="btn-row"><button class="btn ghost" id="bk">Back to meals</button><button class="btn ghost" id="again">Start over</button></div>
   <p class="note">Prices are sample data for demo. Connect a price service to show live shelf prices.</p>
   ${renderRecipeDex()}`;
   const upd=()=>{$('#tt').textContent=S.api?'':fmt(sumChecked());$('#cnt').textContent=S.checked.size;
-    $('#bl').innerHTML=S.api?'':S.checked.size&&sumChecked()>S.budget?'<span style="color:#C8281D">Over budget by '+fmt(sumChecked()-S.budget)+'</span>':'Budget: '+fmt(S.budget);
+    $('#bl').innerHTML=S.api?'':S.checked.size&&sumChecked()>S.budget?'<span style="color:var(--warn)">Over budget by '+fmt(sumChecked()-S.budget)+'</span>':'Budget: '+fmt(S.budget);
     document.querySelectorAll('.it').forEach(e=>{const on=S.checked.has(e.dataset.k);e.classList.toggle('on',on);e.classList.toggle('off',!on)})};
   document.querySelectorAll('.it input').forEach(c=>{c.checked=S.checked.has(c.dataset.k);c.onchange=()=>{c.checked?S.checked.add(c.dataset.k):S.checked.delete(c.dataset.k);upd()}});
   $('#all').onclick=()=>{const all=S.checked.size==g.lines.length;S.checked=new Set(all?[]:g.lines.map(l=>l.k));document.querySelectorAll('.it input').forEach(c=>c.checked=!all);$('#all').textContent=all?'Check all items':'Clear all';upd()};
